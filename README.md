@@ -5,10 +5,15 @@ These following instructions will get you a copy of the project up and running o
 
 ## Installing
 
-In this project, python 3.6 (or later) and PyTorch 0.4 are mainly required for the current codebase. You need to clone the project and install dependencies by running:
+In this project, python 3.6 (or later) and PyTorch 0.4 are mainly required for the current codebase. You need to clone the project:
 
 ```
 git clone https://github.com/ammarinjtk/Neural-Relation-Extraction.git
+```
+
+and then install the dependencies by running:
+
+```
 pip install -r requirements.txt
 ```
 
@@ -26,7 +31,7 @@ After you have downloaded the files, unzip them and update the path setting vari
 
 ## Running the system
 
-To reproduce results from the paper, you should run the following command (it will take 3-4 hours to run on K80 GPU, as it iteratively trains the model for many times):
+To reproduce results from the paper, you should run the following command (it will take 3-4 hours to run on GPU (GTX 1080 Ti), as it iteratively trains the model for many times):
 
 ```
 python main.py
@@ -48,7 +53,7 @@ Since there has been no comparison of existing models with our bootstrap method 
 
 - **Amarin Jettakul** - _Initial work_ - [ammarinjtk](https://github.com/ammarinjtk)
 
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
+See also the list of [contributors](https://github.com/ammarinjtk/Neural-Relation-Extraction/graphs/contributors) who participated in this project.
 
 ## Acknowledgments
 
