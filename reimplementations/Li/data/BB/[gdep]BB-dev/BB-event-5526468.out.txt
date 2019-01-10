@@ -1,0 +1,14 @@
+1	Vibrio	Vibrio	B-NP	NNP	O	2	SUB
+2	fetus	fetu	B-VP	VBZ	O	0	ROOT
+3	human	human	B-NP	JJ	O	4	NMOD
+4	infection	infection	I-NP	NN	O	6	NMOD
+5	--	--	O	:	O	6	P
+6	isolation	isolation	B-NP	NN	O	2	OBJ
+7	from	from	B-PP	IN	O	6	NMOD
+8	a	a	B-NP	DT	O	12	NMOD
+9	subacute	subacute	I-NP	JJ	O	12	NMOD
+10	bacterial	bacterial	I-NP	JJ	O	12	NMOD
+11	endocarditis	endocarditis	I-NP	NN	O	12	NMOD
+12	case	case	I-NP	NN	O	7	PMOD
+13	.	.	O	.	O	2	P
+

@@ -1,0 +1,27 @@
+1	[	[	O	(	O	25	DEP
+2	The	The	B-NP	DT	O	3	NMOD
+3	infections	infection	I-NP	NNS	O	25	DEP
+4	from	from	B-PP	IN	O	3	NMOD
+5	``	``	O	``	O	6	NMOD
+6	Serratia	Serratia	B-NP	NNP	O	4	PMOD
+7	''	''	O	''	O	6	NMOD
+8	in	in	B-PP	IN	O	6	NMOD
+9	the	the	B-NP	DT	O	14	NMOD
+10	Hospital	Hospital	I-NP	NNP	O	14	NMOD
+11	S.	S.	I-NP	NNP	O	14	NMOD
+12	Camillo	Camillo	I-NP	NNP	O	14	NMOD
+13	De	De	I-NP	NNP	O	14	NMOD
+14	Lellis	Lellis	I-NP	NNP	O	8	PMOD
+15	of	of	B-PP	IN	O	14	NMOD
+16	Roma	Roma	B-NP	NNP	O	15	PMOD
+17	(	(	O	(	O	19	DEP
+18	Italy	Italy	B-NP	NNP	O	19	DEP
+19	)	)	O	)	O	16	NMOD
+20	(	(	O	(	O	24	DEP
+21	author	author	B-NP	NN	O	23	NMOD
+22	's	's	B-NP	POS	O	23	NMOD
+23	transl	transl	I-NP	NN	O	24	DEP
+24	)	)	O	)	O	16	NMOD
+25	]	]	O	)	O	0	ROOT
+26	.	.	O	.	O	25	P
+

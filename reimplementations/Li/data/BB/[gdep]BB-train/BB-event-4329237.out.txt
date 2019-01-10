@@ -1,0 +1,26 @@
+1	The	The	B-NP	DT	O	4	NMOD
+2	in	in	I-NP	FW	O	3	AMOD
+3	vitro	vitro	I-NP	FW	O	4	NMOD
+4	assay	assay	I-NP	NN	O	11	SUB
+5	of	of	B-PP	IN	O	4	NMOD
+6	tuberculin	tuberculin	B-NP	NN	O	7	NMOD
+7	hypersensitivity	hypersensitivity	I-NP	NN	O	5	PMOD
+8	in	in	B-PP	IN	O	7	NMOD
+9	Macaca	Macaca	B-NP	NNP	O	10	NMOD
+10	mulatta	mulatta	I-NP	NNP	O	8	PMOD
+11	sensitized	sensitize	B-VP	VBD	O	0	ROOT
+12	with	with	B-PP	IN	O	11	VMOD
+13	bacille	bacille	B-NP	NN	O	18	NMOD
+14	Calmette	Calmette	I-NP	NNP	O	18	NMOD
+15	Guerin	Guerin	I-NP	NNP	O	18	NMOD
+16	cell	cell	I-NP	NN	O	18	NMOD
+17	wall	wall	I-NP	NN	O	18	NMOD
+18	vaccine	vaccine	I-NP	NN	O	12	PMOD
+19	and-or	and-or	O	CC	O	11	VMOD
+20	infected	infect	B-VP	VBN	O	11	VMOD
+21	with	with	B-PP	IN	O	20	VMOD
+22	virulent	virulent	B-NP	JJ	O	24	NMOD
+23	Mycobacterium	Mycobacterium	I-NP	NN	O	24	NMOD
+24	tuberculosis	tuberculosis	I-NP	NN	O	21	PMOD
+25	.	.	O	.	O	11	P
+

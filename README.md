@@ -1,87 +1,56 @@
-# Neural Relation Extraction from Biomedical Texts with Attention Mechanisms and Domain-Specific Contextual Representations
+# A deep relation extraction from biomedical texts with attention mechanisms and domain-specific contextual representations
 
-One Paragraph of project description goes here
+The repository contains the code used for `A deep relation extraction from biomedical texts with attention mechanisms and domain-specific contextual representations` paper on `BMC Bioinformatics` publication.
+These following instructions will get you a copy of the project up and running on your local machine for reimplementation the proposed model.
 
-## Getting Started
+## Installing
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
-
-### Prerequisites
-
-What things you need to install the software and how to install them
+In this project, python 3.6 (or later) and PyTorch 0.4 are mainly required for the current codebase.
+You need to install dependencies by running:
 
 ```
-Give examples
+pip install -r requirements.txt
 ```
 
-### Installing
+## Prerequisites
 
-A step by step series of examples that tell you how to get a development env running
+To get started with the project, you are supposed to download the required material files as follows:
 
-Say what the step will be
+- [Pre-trained word2vec](https://drive.google.com/file/d/1eXeHKZh_PhxA2hf0NRDpODBZ4zk6L711/view?usp=sharing)
+- [Pre-trained domain-specific ELMo](https://drive.google.com/drive/folders/1tnSlCfgFgcJgkWTn-xzAohPGjSAiJOm8?usp=sharing)
+- [Pre-trained BERT](https://drive.google.com/drive/folders/1ySPqub2DRFHYqyfh9qWS0QeJApfrKWwQ?usp=sharing)
 
-```
-Give the example
-```
+Please note that these are very large files, so downloading may take quite a while.
 
-And repeat
+After you have downloaded the files, unzip them and update the path setting variables: `DATA_DIR_PATH`, `W2V_MODEL_PATH`, `ELMO_MODEL_PATH`, `ELMO_OPTIONS_PATH`, `BERT_FEATURES_PATH`, `BERT_TKN_PATH`, and `OUTPUT_DIR_PATH`, in `constants.py` to your local environments.
 
-```
-until finished
-```
+## Running the system
 
-End with an example of getting some data out of the system or using it for a little demo
-
-## Running the tests
-
-Explain how to run the automated tests for this system
-
-### Break down into end to end tests
-
-Explain what these tests test and why
+To reproduce results from the paper, you should run the following command (it will take 3-4 hours to run on K80 GPU, as it iteratively trains the model for many times).
 
 ```
-Give an example
+python main.py
 ```
 
-### And coding style tests
+Please note that you can use tmux as a screen multiplexer in the running process since it can resume the session at any time you desire without worrying about the session being logged out or terminal being closed.
 
-Explain what these tests test and why
+## Evaluation
 
-```
-Give an example
-```
+The model results can be evaluated with the online evaluation service provided by [BioNLP-ST’16](http://bibliome.jouy.inra.fr/demo/BioNLP-ST-2016-Evaluation/index.html).
 
-## Deployment
+Please note that these results (zip files) will be stored in your `OUTPUT_DIR_PATH`.
 
-Add additional notes about how to deploy this on a live system
+## Reimplementations
 
-## Built With
-
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
-
-## Contributing
-
-Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
-
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
+Since there has been no comparison of existing models with our bootstrap method to evaluate the model performance, it is necessary for us to reimplement other existing models to compare with our proposed model. So that, we reimplemented two existing models, [TurkuNLP](http://aclweb.org/anthology/W16-3009) as the deep learning baseline and the best system [Li](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6101075/pdf/12859_2018_Article_2275.pdf) in the `reimplementations` folder.
 
 ## Authors
 
-* **Amarin Jettakul** - *Initial work* - [ammarinjtk](https://github.com/ammarinjtk)
+- **Amarin Jettakul** - _Initial work_ - [ammarinjtk](https://github.com/ammarinjtk)
 
 See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
-
 ## Acknowledgments
 
-* Hat tip to anyone whose code was used
-* Inspiration
-* etc
+- All additional resources are released at [Google Drive](https://drive.google.com/drive/folders/1u7e86ZwqSNERDXjR5tec63Id0nTJBTVO?usp=sharing).
+- The author received the scholarship from Chula Computer Engineering Graduate Scholarship for CP Alumni.

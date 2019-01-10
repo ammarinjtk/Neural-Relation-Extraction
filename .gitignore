@@ -1,0 +1,10 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+
+
+# IPython notebook
+.ipynb_checkpoints
+
+
+# Misc
+.DS_Store

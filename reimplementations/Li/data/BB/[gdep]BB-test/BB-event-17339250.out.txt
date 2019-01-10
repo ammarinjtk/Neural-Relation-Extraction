@@ -1,0 +1,15 @@
+1	Re	Re	B-NP	NN	O	4	NMOD
+2	:	:	O	:	O	1	P
+3	long	long	B-NP	JJ	O	4	NMOD
+4	term	term	I-NP	NN	O	0	ROOT
+5	follow	follow	B-VP	VB	O	4	NMOD
+6	up	up	B-PRT	RP	O	5	VMOD
+7	of	of	B-PP	IN	O	5	VMOD
+8	patients	patient	B-NP	NNS	O	7	PMOD
+9	treated	treat	B-VP	VBN	O	8	NMOD
+10	for	for	B-PP	IN	O	9	VMOD
+11	Helicobacter	Helicobacter	B-NP	NN	O	13	NMOD
+12	pylori	pylori	I-NP	NN	O	13	NMOD
+13	infection	infection	I-NP	NN	O	10	PMOD
+14	.	.	O	.	O	4	P
+

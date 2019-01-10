@@ -1,0 +1,13 @@
+1	Gingivomandibular	Gingivomandibular	B-NP	JJ	O	2	NMOD
+2	infection	infection	I-NP	NN	O	0	ROOT
+3	due	due	B-ADJP	JJ	O	2	NMOD
+4	to	to	B-PP	TO	O	3	AMOD
+5	Mycobacterium	Mycobacterium	B-NP	NN	O	6	NMOD
+6	kansasii	kansasii	I-NP	NN	O	4	PMOD
+7	in	in	B-PP	IN	O	6	NMOD
+8	a	a	B-NP	DT	O	9	NMOD
+9	patient	patient	I-NP	NN	O	7	PMOD
+10	with	with	B-PP	IN	O	9	NMOD
+11	AIDS	AIDS	B-NP	NN	O	10	PMOD
+12	.	.	O	.	O	2	P
+

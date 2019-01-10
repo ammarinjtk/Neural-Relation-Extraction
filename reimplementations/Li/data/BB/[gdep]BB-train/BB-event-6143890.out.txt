@@ -1,0 +1,16 @@
+1	Rapid	Rapid	B-NP	JJ	O	2	NMOD
+2	detection	detection	I-NP	NN	O	0	ROOT
+3	with	with	B-PP	IN	O	2	NMOD
+4	monoclonal	monoclonal	B-NP	JJ	B-protein	5	NMOD
+5	antibodies	antibody	I-NP	NNS	I-protein	3	PMOD
+6	of	of	B-PP	IN	O	5	NMOD
+7	Chlamydia	Chlamydia	B-NP	NN	O	8	NMOD
+8	trachomatis	trachomatis	I-NP	NN	O	6	PMOD
+9	in	in	B-PP	IN	O	8	NMOD
+10	urethral	urethral	B-NP	JJ	O	11	NMOD
+11	smears	smear	I-NP	NNS	O	14	NMOD
+12	and	and	O	CC	O	14	NMOD
+13	urine	urine	B-NP	NN	O	14	NMOD
+14	sediments	sediment	I-NP	NNS	O	9	PMOD
+15	.	.	O	.	O	2	P
+
