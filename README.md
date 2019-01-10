@@ -53,7 +53,7 @@ Since there has been no comparison of existing models with our bootstrap method 
 
 - **Amarin Jettakul** - _Initial work_ - [ammarinjtk](https://github.com/ammarinjtk)
 
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
+See also the list of [contributors](https://github.com/ammarinjtk/Neural-Relation-Extraction/graphs/contributors) who participated in this project.
 
 ## Acknowledgments
 
