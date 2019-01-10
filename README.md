@@ -6,9 +6,10 @@ These following instructions will get you a copy of the project up and running o
 ## Installing
 
 In this project, python 3.6 (or later) and PyTorch 0.4 are mainly required for the current codebase.
-You need to install dependencies by running:
+You need to clone the project and install dependencies by running:
 
 ```
+git clone https://github.com/ammarinjtk/Neural-Relation-Extraction.git
 pip install -r requirements.txt
 ```
 
