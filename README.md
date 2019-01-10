@@ -26,7 +26,7 @@ After you have downloaded the files, unzip them and update the path setting vari
 
 ## Running the system
 
-To reproduce results from the paper, you should run the following command (it will take 3-4 hours to run on K80 GPU, as it iteratively trains the model for many times):
+To reproduce results from the paper, you should run the following command (it will take 3-4 hours to run on GPU (GTX 1080 Ti), as it iteratively trains the model for many times):
 
 ```
 python main.py
