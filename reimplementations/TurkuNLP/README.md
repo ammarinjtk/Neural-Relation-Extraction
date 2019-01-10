@@ -1,6 +1,6 @@
 ## Deep Learning with Minimal Training Data: TurkuNLP Entry in the BioNLP Shared Task 2016
 
-The section contains the code used for `Deep Learning with Minimal Training Data: TurkuNLP Entry in the BioNLP Shared Task 2016` paper.
+The section contains the code used for [Deep Learning with Minimal Training Data: TurkuNLP Entry in the BioNLP Shared Task 2016](http://aclweb.org/anthology/W16-3009) paper.
 
 To reimplement this model, you are supposed to download the required material files as follows:
 
