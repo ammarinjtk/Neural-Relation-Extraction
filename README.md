@@ -41,7 +41,7 @@ Please note that you can use tmux as a screen multiplexer in the running process
 
 ## Evaluation
 
-The model results can be evaluated with the online evaluation service provided by [BioNLP-ST’16](http://bibliome.jouy.inra.fr/demo/BioNLP-ST-2016-Evaluation/index.html).
+The model results, shown in `final_predictions` folder, can be evaluated with the online evaluation service provided by [BioNLP-ST’16](http://bibliome.jouy.inra.fr/demo/BioNLP-ST-2016-Evaluation/index.html).
 
 Please note that these results (zip files) will be stored in your `OUTPUT_DIR_PATH`.
 
