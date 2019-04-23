@@ -13,3 +13,5 @@ After that, to create the predictions, run the following command:
 ```
 python main.py
 ```
+
+The `main.py` will ......
