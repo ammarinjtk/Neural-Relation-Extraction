@@ -9,18 +9,20 @@ ELMO_EMBEDDING_DIM = 400
 
 BERT_FEATURE_DIM = 768
 
-# SEED = 7408
-SEED_LIST = [166977, 755352, 820719, 585845, 312510, 250906, 675969, 647216, 290780, 692033, 439708, 195900, 614636, 240825,
-             545617, 651802, 239387, 489995, 910463, 427810, 920316, 730426, 979591, 618602, 811533, 194063, 689795, 773546, 795116, 863132]
+# SEED = 239387
+
+SEED_LIST = [345, 166977, 239387, 240825, 250906, 290780, 312510, 439708, 489995, 
+             545617, 585845, 614636, 675969, 820719, 920316, 1187617, 1484458, 3835082, 
+             5064379, 5647183, 5694250, 6333898, 6797546, 7144728, 7461780, 7696045, 8468732, 
+             8730848, 8842617, 9975400]
 
 DATA_DIR_PATH = "./data"
 
-W2V_MODEL_PATH = "/hdd/ammarinjtk/wikipedia-pubmed-and-PMC-w2v.bin"
+W2V_MODEL_PATH = "/home/mind/ammarinjtk/wikipedia-pubmed-and-PMC-w2v.bin"
 
-ELMO_MODEL_PATH = "/hdd/ammarinjtk/ELMO_model/revised_bacteria_pubmed/headentity_finetune_weights.hdf5"
-ELMO_OPTIONS_PATH = "/hdd/ammarinjtk/ELMO_model/revised_bacteria_pubmed/options.json"
+ELMO_MODEL_PATH = "/home/mind/ammarinjtk/Neural-Relation-Extraction/entitykeyword_finetune_weights.hdf5"
+ELMO_OPTIONS_PATH = "/home/mind/ammarinjtk/Neural-Relation-Extraction/options.json"
 
-BERT_FEATURES_PATH = "/hdd/ammarinjtk/BERT_features/synonym_revised_headentity/finetune_bert.jsonl"
-BERT_TKN_PATH = "/hdd/ammarinjtk/BERT_features/synonym_revised_headentity/tkn.txt"
+BERT_FEATURES_PATH = "/home/mind/ammarinjtk/Neural-Relation-Extraction/finetuned_bert.jsonl"
 
-OUTPUT_DIR_PATH = "/hdd/ammarinjtk/example_predictions/our"
+OUTPUT_DIR_PATH = "./our_predictions"

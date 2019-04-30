@@ -50,7 +50,7 @@ f1_writer = []
 model_idx = 0
 
 # In-side For loop
-for seed in tqdm(SEED_LIST[:2], desc='seed loop'):
+for seed in tqdm(SEED_LIST[:10], desc='seed loop'):
 
     torch.cuda.manual_seed_all(seed)
     torch.manual_seed(seed)

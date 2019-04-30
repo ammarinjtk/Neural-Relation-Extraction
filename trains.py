@@ -3,9 +3,8 @@ from constants import *
 from utils import *
 
 def train_model(model, elmo_model, trn_data, val_data, word_to_ix, pos_to_ix, 
-                distance_to_ix, dependency_to_ix, criterion, optimizer, 
-                lr_scheduler, num_epochs=4, early_stopped_patience=30, 
-                batch_size=3, verbose=True):
+                distance_to_ix, criterion, optimizer, num_epochs=100, 
+                early_stopped_patience=10, batch_size=4, verbose=True):
     
     since = time.time()
 
@@ -31,11 +30,14 @@ def train_model(model, elmo_model, trn_data, val_data, word_to_ix, pos_to_ix,
 
         model.train()  # Set model to training mode
         
-        batch_count = 1
+        batch_count = 0
         batch_loss = 0.0
         batch_f1 = 0.0
         
-        # Iterate over data.
+        y_trues = []
+        y_preds = []
+        
+        # Iterate over training data.
         for i in range(0,trn_data_len, batch_size):
             trn_batch_data = np.array(trn_data)[i:i+batch_size]
             
@@ -43,19 +45,13 @@ def train_model(model, elmo_model, trn_data, val_data, word_to_ix, pos_to_ix,
             pos_batch = []
             dist1_batch = []
             dist2_batch = []
-            dep_batch = []
             lengths_batch = []
-            position_batch = []
-            
-            entity_type_batch = []
 
             shortest_token_batch = []
             shortest_pos_batch = []
             shortest_dist1_batch = []
             shortest_dist2_batch = []
-            shortest_dep_batch = []
             shortest_position_batch = []
-            shortest_lengths_batch = []
 
             label_batch = []
             
@@ -64,10 +60,12 @@ def train_model(model, elmo_model, trn_data, val_data, word_to_ix, pos_to_ix,
             max_sentence_length = np.max([np.max(
                 [len(input_dict['full_inputs']['full_token']), 
                  len(input_dict['full_inputs']['full_pos']), 
-                 len(input_dict['full_inputs']['full_dep'])]) for input_dict in trn_batch_data])
+                 len(input_dict['full_inputs']['full_dist1']), 
+                 len(input_dict['full_inputs']['full_dist2'])]) for input_dict in trn_batch_data])
             shortest_max_sentence_length = np.max([np.max([len(input_dict['shortest_inputs']['shortest_token']), 
                                                            len(input_dict['shortest_inputs']['shortest_pos']), 
-                                                           len(input_dict['shortest_inputs']['shortest_dep'])]) for input_dict in trn_batch_data])
+                                                           len(input_dict['shortest_inputs']['shortest_dist1']), 
+                                                           len(input_dict['shortest_inputs']['shortest_dist2'])]) for input_dict in trn_batch_data])
             
             ELMO_sentences = []
             ELMO_shortest = []
@@ -86,23 +84,13 @@ def train_model(model, elmo_model, trn_data, val_data, word_to_ix, pos_to_ix,
                 pos, pos_idx = prepare_sequence(inputs['full_pos'], pos_to_ix, max_length=max_sentence_length, prepare_word=False, padding=True)
                 dist1, dist1_idx = prepare_sequence(inputs['full_dist1'], distance_to_ix, max_length=max_sentence_length, prepare_word=False, padding=True)
                 dist2, dist2_idx = prepare_sequence(inputs['full_dist2'], distance_to_ix, max_length=max_sentence_length, prepare_word=False, padding=True)
-                dep, dep_idx = prepare_sequence(inputs['full_dep'], dependency_to_ix, max_length=max_sentence_length, prepare_word=False, padding=True)
                 
                 ELMO_sentences.append(token)
-                
-                position_idx = []
-                for i in range(lengths):
-                    position_idx.append(i)
-                for _ in range(max_sentence_length-lengths):
-                    position_idx.append(0)
-                
-                position_batch.append(torch.tensor(position_idx, dtype=torch.long))
 
                 token_batch.append(token_idx)
                 pos_batch.append(pos_idx)
                 dist1_batch.append(dist1_idx)
                 dist2_batch.append(dist2_idx)
-                dep_batch.append(dep_idx)
                 label_batch.append(torch.tensor([label], dtype=torch.long))
                 lengths_batch.append(lengths)
 
@@ -110,7 +98,6 @@ def train_model(model, elmo_model, trn_data, val_data, word_to_ix, pos_to_ix,
                 pos, pos_idx = prepare_sequence(shortset_inputs['shortest_pos'], pos_to_ix, max_length=shortest_max_sentence_length, prepare_word=False, padding=True)
                 dist1, dist1_idx = prepare_sequence(shortset_inputs['shortest_dist1'], distance_to_ix, max_length=shortest_max_sentence_length, prepare_word=False, padding=True)
                 dist2, dist2_idx = prepare_sequence(shortset_inputs['shortest_dist2'], distance_to_ix, max_length=shortest_max_sentence_length, prepare_word=False, padding=True)
-                dep, dep_idx = prepare_sequence(shortset_inputs['shortest_dep'], dependency_to_ix, max_length=shortest_max_sentence_length, prepare_word=False, padding=True)
                 
                 ELMO_shortest.append(token)
                 
@@ -126,78 +113,65 @@ def train_model(model, elmo_model, trn_data, val_data, word_to_ix, pos_to_ix,
                 shortest_pos_batch.append(pos_idx)
                 shortest_dist1_batch.append(dist1_idx)
                 shortest_dist2_batch.append(dist2_idx)
-                shortest_dep_batch.append(dep_idx)
-                shortest_lengths_batch.append(shortest_lengths)
                 
                 # Entity and Entity type for each iter
-                
-                _, entities = prepare_sequence([token[0], [word for word in token if word != PADDING_WORD][-1]], word_to_ix, max_length=2)
-
+                _, entities = prepare_sequence(["entity_1", "entity_2"], word_to_ix, max_length=2)
 
                 entity_batch.append(entities)
                 
-                ELMO_entities.append([token[0], [word for word in token if word != PADDING_WORD][-1]])
-                
-                corresponding_entity_type = torch.tensor([1], dtype=torch.float) if entity_idx_to_type[entity_tag[1]] == 'Habitat' else torch.tensor([0], dtype=torch.float)
-                entity_type_batch.append(corresponding_entity_type)
+                ELMO_entities.append(["entity_1", "entity_2"])
                 
                 BERT_features.append(torch.tensor(input_dict['bert_features'], dtype=torch.float))
 
             # Sort lengths in decending order
             inds = np.argsort(-torch.stack(lengths_batch).numpy())
-            label_batch = torch.stack(label_batch)[inds]
-            lengths_batch = torch.stack(lengths_batch)[inds] # lengths_batch
-            entity_type_batch = torch.stack(entity_type_batch)[inds]
+            label_batch = torch.stack(label_batch)[inds].cuda()
+            lengths_batch = torch.stack(lengths_batch)[inds].cuda() # lengths_batch
             
             batch_in = {
-                'token': torch.stack(token_batch)[inds],
-                'pos': torch.stack(pos_batch)[inds],
-                'dist1': torch.stack(dist1_batch)[inds],
-                'dist2': torch.stack(dist2_batch)[inds],
-                'dep': torch.stack(dep_batch)[inds],
-                'position': torch.stack(position_batch)[inds],
-                'bert_features': torch.stack(BERT_features)[inds]
+                'token': torch.stack(token_batch)[inds].cuda(),
+                'pos': torch.stack(pos_batch)[inds].cuda(),
+                'dist1': torch.stack(dist1_batch)[inds].cuda(),
+                'dist2': torch.stack(dist2_batch)[inds].cuda(),
+                'bert_features': torch.stack(BERT_features)[inds].cuda()
             }
 
             shortest_batch_in = {
-                'token': torch.stack(shortest_token_batch)[inds],
-                'pos': torch.stack(shortest_pos_batch)[inds],
-                'dist1': torch.stack(shortest_dist1_batch)[inds],
-                'dist2': torch.stack(shortest_dist2_batch)[inds],
-                'dep': torch.stack(shortest_dep_batch)[inds],
-                'position': torch.stack(shortest_position_batch)[inds]
+                'token': torch.stack(shortest_token_batch)[inds].cuda(),
+                'pos': torch.stack(shortest_pos_batch)[inds].cuda(),
+                'dist1': torch.stack(shortest_dist1_batch)[inds].cuda(),
+                'dist2': torch.stack(shortest_dist2_batch)[inds].cuda(),
+                'position': torch.stack(shortest_position_batch)[inds].cuda()
             }
-            
+  
             character_ids = batch_to_ids(ELMO_sentences)
-            ELMO_embeddings = elmo_model(character_ids)
-            
-            character_ids = batch_to_ids(ELMO_shortest)
-            ELMO_shortest_embeddings = elmo_model(character_ids)
-            
-            character_ids = batch_to_ids(ELMO_entities)
-            ELMO_entity_embeddings = elmo_model(character_ids)
+            ELMO_embeddings = elmo_model(character_ids)['elmo_representations'][0].cuda()
 
-            # entities = torch.tensor([word_to_ix['entity_1'], word_to_ix['entity_2']], dtype=torch.long)
-            
+            character_ids = batch_to_ids(ELMO_shortest)
+            ELMO_shortest_embeddings = elmo_model(character_ids)['elmo_representations'][0].cuda()
+
+            character_ids = batch_to_ids(ELMO_entities)
+            ELMO_entity_embeddings = elmo_model(character_ids)['elmo_representations'][0].cuda()
+
             entities = torch.stack(entity_batch)[inds]
 
             # zero the parameter gradients
             optimizer.zero_grad()
-            
-            shortest_lengths_batch = torch.stack(shortest_lengths_batch)[inds]
-            outputs = model(batch_in, shortest_batch_in, entities, lengths_batch, shortest_lengths_batch,
-                            ELMO_embeddings['elmo_representations'][0], 
-                            ELMO_shortest_embeddings['elmo_representations'][0], 
-                            entity_type_batch, ELMO_entity_embeddings['elmo_representations'][0])
+            outputs = model(batch_in, shortest_batch_in, entities, lengths_batch, 
+                            ELMO_embeddings, 
+                            ELMO_shortest_embeddings, 
+                            ELMO_entity_embeddings)
             
             if len(outputs.size()) == 1: # batch_size is 1
                 outputs = outputs.unsqueeze(0)
 
             loss = criterion(outputs, label_batch.squeeze(1))
             preds = torch.max(outputs, dim=1)[1]
-
+            
             running_f1 = f1_score(np.array([x.item() for x in label_batch]), 
-                                np.array(preds))
+                                np.array(preds.cpu()))
+            
+            # print(f"Training, epoch: {epoch}, batch_count: {batch_count} running_f1: {running_f1}")
 
             # backward + optimize only if in training phase
             loss.backward()
@@ -207,20 +181,26 @@ def train_model(model, elmo_model, trn_data, val_data, word_to_ix, pos_to_ix,
             batch_loss += loss.item()
             batch_f1 += running_f1
             batch_count += 1
+            
+            y_trues += [x.item() for x in label_batch]
+            y_preds += [x.item() for x in preds]
 
         epoch_loss = batch_loss / batch_count
+        # epoch_f1 = f1_score(np.array(y_trues), np.array(y_preds))
         epoch_f1 = batch_f1 / batch_count
         
-
-        batch_count = 1
+        batch_count = 0
         batch_loss = 0.0
         batch_f1 = 0.0
+        
+        y_trues = []
+        y_preds = []
         
         if val_data is not None:
             
             model.eval()   # Set model to evaluate mode
             
-            # Iterate over data.
+            # Iterate over validation data.
             for i in range(0,val_data_len, batch_size):
                 val_batch_data = np.array(val_data)[i:i+batch_size]
 
@@ -228,19 +208,13 @@ def train_model(model, elmo_model, trn_data, val_data, word_to_ix, pos_to_ix,
                 pos_batch = []
                 dist1_batch = []
                 dist2_batch = []
-                dep_batch = []
                 lengths_batch = []
-                position_batch = []
-                
-                entity_type_batch = []
 
                 shortest_token_batch = []
                 shortest_pos_batch = []
                 shortest_dist1_batch = []
                 shortest_dist2_batch = []
-                shortest_dep_batch = []
                 shortest_position_batch = []
-                shortest_lengths_batch = []
 
                 label_batch = []
                 
@@ -254,12 +228,14 @@ def train_model(model, elmo_model, trn_data, val_data, word_to_ix, pos_to_ix,
                 
                 # There is a case that #dep more than #token
                 max_sentence_length = np.max([np.max(
-                    [len(input_dict['full_inputs']['full_token']), 
-                     len(input_dict['full_inputs']['full_pos']), 
-                     len(input_dict['full_inputs']['full_dep'])]) for input_dict in val_batch_data])
+                [len(input_dict['full_inputs']['full_token']), 
+                 len(input_dict['full_inputs']['full_pos']), 
+                 len(input_dict['full_inputs']['full_dist1']), 
+                 len(input_dict['full_inputs']['full_dist2'])]) for input_dict in val_batch_data])
                 shortest_max_sentence_length = np.max([np.max([len(input_dict['shortest_inputs']['shortest_token']), 
                                                                len(input_dict['shortest_inputs']['shortest_pos']), 
-                                                               len(input_dict['shortest_inputs']['shortest_dep'])]) for input_dict in val_batch_data])
+                                                               len(input_dict['shortest_inputs']['shortest_dist1']), 
+                                                               len(input_dict['shortest_inputs']['shortest_dist2'])]) for input_dict in val_batch_data])
 
                 for input_dict in val_batch_data:
                     inputs = input_dict['full_inputs']
@@ -272,21 +248,11 @@ def train_model(model, elmo_model, trn_data, val_data, word_to_ix, pos_to_ix,
                     pos, pos_idx = prepare_sequence(inputs['full_pos'], pos_to_ix, max_length=max_sentence_length, prepare_word=False, padding=True)
                     dist1, dist1_idx = prepare_sequence(inputs['full_dist1'], distance_to_ix, max_length=max_sentence_length, prepare_word=False, padding=True)
                     dist2, dist2_idx = prepare_sequence(inputs['full_dist2'], distance_to_ix, max_length=max_sentence_length, prepare_word=False, padding=True)
-                    dep, dep_idx = prepare_sequence(inputs['full_dep'], dependency_to_ix, max_length=max_sentence_length, prepare_word=False, padding=True)
-                    
-                    position_idx = []
-                    for i in range(lengths):
-                        position_idx.append(i)
-                    for _ in range(max_sentence_length-lengths):
-                        position_idx.append(0)
-
-                    position_batch.append(torch.tensor(position_idx, dtype=torch.long))
 
                     token_batch.append(token_idx)
                     pos_batch.append(pos_idx)
                     dist1_batch.append(dist1_idx)
                     dist2_batch.append(dist2_idx)
-                    dep_batch.append(dep_idx)
                     label_batch.append(torch.tensor([label], dtype=torch.long))
                     lengths_batch.append(lengths)
                     
@@ -296,7 +262,6 @@ def train_model(model, elmo_model, trn_data, val_data, word_to_ix, pos_to_ix,
                     pos, pos_idx = prepare_sequence(shortset_inputs['shortest_pos'], pos_to_ix, max_length=shortest_max_sentence_length, prepare_word=False, padding=True)
                     dist1, dist1_idx = prepare_sequence(shortset_inputs['shortest_dist1'], distance_to_ix, max_length=shortest_max_sentence_length, prepare_word=False, padding=True)
                     dist2, dist2_idx = prepare_sequence(shortset_inputs['shortest_dist2'], distance_to_ix, max_length=shortest_max_sentence_length, prepare_word=False, padding=True)
-                    dep, dep_idx = prepare_sequence(shortset_inputs['shortest_dep'], dependency_to_ix, max_length=shortest_max_sentence_length, prepare_word=False, padding=True)
                     
                     position_idx = []
                     for i in range(shortest_lengths):
@@ -310,87 +275,78 @@ def train_model(model, elmo_model, trn_data, val_data, word_to_ix, pos_to_ix,
                     shortest_pos_batch.append(pos_idx)
                     shortest_dist1_batch.append(dist1_idx)
                     shortest_dist2_batch.append(dist2_idx)
-                    shortest_dep_batch.append(dep_idx)
-                    shortest_lengths_batch.append(shortest_lengths)
                     
                     ELMO_shortest.append(token)
                     
                     # Entity and Entity type for each iter
-                    _, entities = prepare_sequence([token[0], [word for word in token if word != PADDING_WORD][-1]], word_to_ix, max_length=2)
-                    
+                    _, entities = prepare_sequence(["entity_1", "entity_2"], word_to_ix, max_length=2)
+
                     entity_batch.append(entities)
-                    
-                    corresponding_entity_type = torch.tensor([1], dtype=torch.float) if entity_idx_to_type[entity_tag[1]] == 'Habitat' else torch.tensor([0], dtype=torch.float)
-                    entity_type_batch.append(corresponding_entity_type)
-                    
-                    ELMO_entities.append([token[0], [word for word in token if word != PADDING_WORD][-1]])
-                    
+
+                    ELMO_entities.append(["entity_1", "entity_2"])
+
                     BERT_features.append(torch.tensor(input_dict['bert_features'], dtype=torch.float))
 
                 # Sort lengths in decending order
                 inds = np.argsort(-torch.stack(lengths_batch).numpy())
-                label_batch = torch.stack(label_batch)[inds]
-                lengths_batch = torch.stack(lengths_batch)[inds]
-                entity_type_batch = torch.stack(entity_type_batch)[inds]
-                shortest_lengths_batch = torch.stack(shortest_lengths_batch)[inds]
+                label_batch = torch.stack(label_batch)[inds].cuda()
+                lengths_batch = torch.stack(lengths_batch)[inds].cuda()
 
                 batch_in = {
-                    'token': torch.stack(token_batch)[inds],
-                    'pos': torch.stack(pos_batch)[inds],
-                    'dist1': torch.stack(dist1_batch)[inds],
-                    'dist2': torch.stack(dist2_batch)[inds],
-                    'dep': torch.stack(dep_batch)[inds],
-                    'position': torch.stack(position_batch)[inds],
-                    'bert_features': torch.stack(BERT_features)[inds]
+                    'token': torch.stack(token_batch)[inds].cuda(),
+                    'pos': torch.stack(pos_batch)[inds].cuda(),
+                    'dist1': torch.stack(dist1_batch)[inds].cuda(),
+                    'dist2': torch.stack(dist2_batch)[inds].cuda(),
+                    'bert_features': torch.stack(BERT_features)[inds].cuda()
                 }
 
                 shortest_batch_in = {
-                    'token': torch.stack(shortest_token_batch)[inds],
-                    'pos': torch.stack(shortest_pos_batch)[inds],
-                    'dist1': torch.stack(shortest_dist1_batch)[inds],
-                    'dist2': torch.stack(shortest_dist2_batch)[inds],
-                    'dep': torch.stack(shortest_dep_batch)[inds],
-                    'position': torch.stack(shortest_position_batch)[inds]
+                    'token': torch.stack(shortest_token_batch)[inds].cuda(),
+                    'pos': torch.stack(shortest_pos_batch)[inds].cuda(),
+                    'dist1': torch.stack(shortest_dist1_batch)[inds].cuda(),
+                    'dist2': torch.stack(shortest_dist2_batch)[inds].cuda(),
+                    'position': torch.stack(shortest_position_batch)[inds].cuda()
                 }
-                
+
                 character_ids = batch_to_ids(ELMO_sentences)
-                ELMO_embeddings = elmo_model(character_ids)
-                
+                ELMO_embeddings = elmo_model(character_ids)['elmo_representations'][0].cuda()
+
                 character_ids = batch_to_ids(ELMO_shortest)
-                ELMO_shortest_embeddings = elmo_model(character_ids)
-                
+                ELMO_shortest_embeddings = elmo_model(character_ids)['elmo_representations'][0].cuda()
+
                 character_ids = batch_to_ids(ELMO_entities)
-                ELMO_entity_embeddings = elmo_model(character_ids)
+                ELMO_entity_embeddings = elmo_model(character_ids)['elmo_representations'][0].cuda()
 
                 entities = torch.stack(entity_batch)[inds]
-                
+
                 # zero the parameter gradients
                 optimizer.zero_grad()
+                outputs = model(batch_in, shortest_batch_in, entities, lengths_batch, 
+                                ELMO_embeddings, 
+                                ELMO_shortest_embeddings, 
+                                ELMO_entity_embeddings)
 
-                outputs = model(batch_in, shortest_batch_in, entities, lengths_batch, shortest_lengths_batch, 
-                                ELMO_embeddings['elmo_representations'][0], 
-                                ELMO_shortest_embeddings['elmo_representations'][0], 
-                                entity_type_batch, ELMO_entity_embeddings['elmo_representations'][0])
-                  
                 if len(outputs.size()) == 1: # batch_size is 1
                     outputs = outputs.unsqueeze(0)
                 
                 loss = criterion(outputs, label_batch.squeeze(1))
                 preds = torch.max(outputs, dim=1)[1]
-
+                
                 running_f1 = f1_score(np.array([x.item() for x in label_batch]), 
-                                    np.array(preds))
+                                np.array(preds.cpu()))
 
                 # statistics
                 batch_loss += loss.item()
                 batch_f1 += running_f1
                 batch_count += 1
+                
+                y_trues += [x.item() for x in label_batch]
+                y_preds += [x.item() for x in preds]
 
             val_epoch_loss = batch_loss / batch_count
+            # val_epoch_f1 = f1_score(np.array(y_trues), np.array(y_preds))
             val_epoch_f1 = batch_f1 / batch_count
             
-            if lr_scheduler is not None:
-                lr_scheduler.step(val_epoch_f1)
             if verbose:
                 print('Train, (Loss: {:.4f}, F1_score: {:.4f}), Val, (Loss: {:.4f}, F1_score: {:.4f})'.format(epoch_loss, epoch_f1, val_epoch_loss, val_epoch_f1))
             
@@ -405,9 +361,6 @@ def train_model(model, elmo_model, trn_data, val_data, word_to_ix, pos_to_ix,
                     # improve
                     if verbose:
                         print("Val F1_score improved from {:.4f} to {:.4f}".format(best_val_f1, val_epoch_f1))
-                    if lr_scheduler is not None:
-                        lr_scheduler.cooldown_counter = 0
-                        lr_scheduler.num_bad_epochs = 0
                     best_val_f1 = val_epoch_f1
                     best_train_f1 = epoch_f1
                     early_stopped_patience_count = 1
@@ -450,3 +403,4 @@ def train_model(model, elmo_model, trn_data, val_data, word_to_ix, pos_to_ix,
     model.load_state_dict(best_model_wts)
     
     return (model, best_train_f1, best_val_f1, history)
+

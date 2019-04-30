@@ -1,6 +1,5 @@
 from imports import *
 from constants import *
-from dropout_rnn import LockedDropout, embedded_dropout, WeightDrop
 
 class MultiHeadAttention(nn.Module):
     def __init__(self,
@@ -23,7 +22,7 @@ class MultiHeadAttention(nn.Module):
         self._num_units = num_units
         self._h = h
         self._key_dim = torch.tensor(
-            data=[key_dim], requires_grad=True, dtype=torch.float32)
+            data=[key_dim], requires_grad=True, dtype=torch.float32).cuda()
         self._dropout_p = dropout_p
         self._is_masked = is_masked
 
@@ -77,7 +76,7 @@ class MultiHeadAttention(nn.Module):
         # apply batch normalization
         attention = self.bn(attention.transpose(1, 2)).transpose(1, 2)
 
-        return attention
+        return attention, scores
     
 class PositionWiseFFN(nn.Module):
     def __init__(self, feature_size, num_units=[1024, 300]):
@@ -166,13 +165,14 @@ class SelfAttention(nn.Module):
         # sum the hidden states (context vector)
         representations = weighted.sum(1).squeeze()
 
-        return representations
+        return representations, scores
     
 class EntityOrientedAttention(nn.Module):
     
-    def __init__(self, attention_size, non_linearity="tanh"):
+    def __init__(self, attention_size, non_linearity="tanh", embedding_size=ELMO_EMBEDDING_DIM):
         super(EntityOrientedAttention, self).__init__()
         self.softmax = nn.Softmax(dim=-1)
+        self.embedding_size = embedding_size
         
         self.linear = nn.Linear(attention_size, attention_size)
 
@@ -201,8 +201,8 @@ class EntityOrientedAttention(nn.Module):
 
         # inputs is a 3D Tensor: batch, len, hidden_size
         # entities is 3D Tensor: 2, batch, hidden_size
-        a1 = self.softmax(inputs.matmul(entities[0].unsqueeze(2))/WORD_EMBEDDING_DIM).squeeze(2) # [B, L]
-        a2 = self.softmax(inputs.matmul(entities[1].unsqueeze(2))/WORD_EMBEDDING_DIM).squeeze(2) # [B, L]
+        a1 = self.softmax(inputs.matmul(entities[0].unsqueeze(2))/self.embedding_size).squeeze(2) # [B, L]
+        a2 = self.softmax(inputs.matmul(entities[1].unsqueeze(2))/self.embedding_size).squeeze(2) # [B, L]
         scores = (a1+a2)/2 # [B, L]
 
         # construct a mask, based on the sentence lengths
@@ -219,7 +219,7 @@ class EntityOrientedAttention(nn.Module):
         # multiply each hidden state with the attention weights
         weighted = torch.mul(inputs, scores.unsqueeze(-1).expand_as(inputs)) # [B, L, H]
         
-        return weighted
+        return weighted, scores
     
 class CnnText(nn.Module):
     """
@@ -249,16 +249,6 @@ class CnnText(nn.Module):
         for conv in self.convs:
             x2 = F.relu(conv(x))        # [B, F, T, 1]
             x2 = torch.squeeze(x2, -1)  # [B, F, T]
-            
-#             x2 = x2.transpose(1, 2)
-#             x2, _ = self.multihead_attn(x2, x2) # [B, T, F]
-#             x2 = x2.transpose(2, 1)
-
-#             x2 = x2.transpose(1, 2)
-#             for i, mhattn in enumerate(self.multihead_attns):
-#                 mhattn_vect, _ = mhattn(x2, x2)
-#                 x2 = F.relu(mhattn_vect)
-#             x2 = x2.transpose(2, 1)
             
             x2 = F.max_pool1d(x2, x2.size(2))  # [B, F, 1]
             xs.append(x2)
@@ -292,22 +282,18 @@ def get_sinusoid_encoding_table(n_position, d_hid, padding_idx=None):
     
 class Frankenstein(nn.Module):
 
-    def __init__(self, vocab_size, pos_size, distance_size, dependency_size, max_sequence_length, 
+    def __init__(self, vocab_size, pos_size, distance_size, max_sequence_length, 
                  pretrained_embedding_matrix, distance_pretrain_embedding_matrix, batch_size=1, 
                  word_embedding_dim=WORD_EMBEDDING_DIM, pos_embedding_dim=POS_EMBEDDING_DIM, 
-                 distance_embedding_dim=DISTANCE_EMBEDDING_DIM, dependency_embedding_dim=DEPENDENCY_EMBEDDING_DIM, 
-                 hidden_dim=128, drop=0.5, wdrop=0.5, edrop=0.3, idrop=0.5, window_sizes=(2, 3), h=8, multihead_sizes=3):
+                 distance_embedding_dim=DISTANCE_EMBEDDING_DIM, 
+                 hidden_dim=128, drop=0.5, h=8, multihead_sizes=3):
         super(Frankenstein, self).__init__()
         self.hidden_dim = hidden_dim
         self.batch_size = batch_size
-        self.lockdrop = LockedDropout()
-        self.idrop = idrop
-        self.edrop = edrop
         
         self.word_embedding_dim = word_embedding_dim
         self.pos_embedding_dim = pos_embedding_dim
         self.distance_embedding_dim = distance_embedding_dim
-        self.dependency_embedding_dim = dependency_embedding_dim
         
         self.all_embedding_dim = ELMO_EMBEDDING_DIM+pos_embedding_dim+(2*distance_embedding_dim)
 
@@ -323,107 +309,60 @@ class Frankenstein(nn.Module):
         # Then, scaled by max corpus distance and passed through tanh activation
         self.distance_embeddings = nn.Embedding(distance_size, distance_embedding_dim)
         self.distance_embeddings.weight.data.copy_(torch.from_numpy(distance_pretrain_embedding_matrix))
-        self.dependency_embeddings = nn.Embedding(dependency_size, dependency_embedding_dim)
 
         self.rnn = nn.LSTM(self.all_embedding_dim, 
                            hidden_dim // 2, 
                            bidirectional=True)
         
-        if wdrop:
-            self.rnn = WeightDrop(self.rnn, ['weight_hh_l0'], dropout=wdrop)
-            
-        self.cnn = CnnText(embed_dim=self.all_embedding_dim, 
-                           num_filters=hidden_dim, 
-                           window_sizes=window_sizes, 
-                           h=h)
-        
-        # Attention
+        # Attentions
         self.attn = EntityOrientedAttention(word_embedding_dim)
         self.self_attn = SelfAttention(hidden_dim)
         self.multihead_attns = nn.ModuleList(
             [MultiHeadAttention(self.all_embedding_dim, self.all_embedding_dim, self.all_embedding_dim, h=h) for size in range(multihead_sizes)])
-        
+
         self.dropout = nn.Dropout(drop)
 
         self.output = nn.Linear(hidden_dim+self.all_embedding_dim+BERT_FEATURE_DIM, 2)
-        # hidden_dim*(len(window_sizes))
         
         self.rnn_hidden = self.init_hidden()
 
     def init_hidden(self):
-        return (torch.rand(2, self.batch_size, self.hidden_dim // 2), 
-                torch.rand(2, self.batch_size, self.hidden_dim // 2))
+        return (torch.rand(2, self.batch_size, self.hidden_dim // 2).cuda(), 
+                torch.rand(2, self.batch_size, self.hidden_dim // 2).cuda())
     
     def _get_embedding(self, inputs, shortest_inputs, entities, lengths, ELMO_embeddings, ELMO_shortest_embeddings, ELMO_entity_embeddings):
         
-        # Full sentences
-        word_embeddings = embedded_dropout(self.word_embeddings, 
-                         inputs['token'], 
-                         dropout=self.edrop if self.training else 0)
-        pos_embeddings = embedded_dropout(self.pos_embeddings, 
-                         inputs['pos'], 
-                         dropout=self.edrop if self.training else 0)
-        dist_1_embeddings = embedded_dropout(self.distance_embeddings, 
-                         inputs['dist1'], 
-                         dropout=self.edrop if self.training else 0)
-        dist_2_embeddings = embedded_dropout(self.distance_embeddings, 
-                         inputs['dist2'], 
-                         dropout=self.edrop if self.training else 0)
-        dependency_embeddings = embedded_dropout(self.dependency_embeddings, 
-                             inputs['dep'], 
-                             dropout=self.edrop if self.training else 0)
-        position_embeddings = embedded_dropout(self.position_embeddings, 
-                             inputs['position'], 
-                             dropout=self.edrop if self.training else 0)
+        # Full sentence
+        pos_embeddings = self.pos_embeddings(inputs['pos'])
+        dist_1_embeddings = self.distance_embeddings(inputs['dist1'])
+        dist_2_embeddings = self.distance_embeddings(inputs['dist2'])
         
-        word_embeddings = self.lockdrop(word_embeddings, self.idrop)
-        pos_embeddings = self.lockdrop(pos_embeddings, self.idrop)
-        dist_1_embeddings = self.lockdrop(dist_1_embeddings, self.idrop)
-        dist_2_embeddings = self.lockdrop(dist_2_embeddings, self.idrop)
-        dependency_embeddings = self.lockdrop(dependency_embeddings, self.idrop)
-        position_embeddings = self.lockdrop(position_embeddings, self.idrop)
+        batch_size, seq_len, _ = pos_embeddings.size()
         
-        batch_size, seq_len, _ = word_embeddings.size()
-        
-        # Entity-oriented Attention for context-free word embeddings
-        # entity_embeddings = self.word_embeddings(entities).view(2, batch_size, -1)
-        # word_embeddings = self.attn(word_embeddings, entity_embeddings, lengths)
-        
-        word_embeddings = word_embeddings.view(seq_len, batch_size, -1)
         pos_embeddings = pos_embeddings.view(seq_len, batch_size, -1)
         dist_1_embeddings = dist_1_embeddings.view(seq_len, batch_size, -1)
         dist_2_embeddings = dist_2_embeddings.view(seq_len, batch_size, -1)
-        dependency_embeddings = dependency_embeddings.view(seq_len, batch_size, -1)
-        position_embeddings = position_embeddings.view(seq_len, batch_size, -1)
         
-        # Entity-oriented Attention for contextual word embeddings
+        ## Entity-oriented Attention for ELMo embeddings
         ELMO_entity_embeddings = ELMO_entity_embeddings.view(2, batch_size, -1)
-        ELMO_embeddings = self.attn(ELMO_embeddings, ELMO_entity_embeddings, lengths)
+        ELMO_embeddings, _ = self.attn(ELMO_embeddings, ELMO_entity_embeddings, lengths)
         ELMO_embeddings = ELMO_embeddings.view(seq_len, batch_size, -1)
 
         embedding_vector = F.relu(torch.cat((ELMO_embeddings, pos_embeddings, dist_1_embeddings, dist_2_embeddings), 2))
         
         # SDP
-        word_embeddings = self.word_embeddings(shortest_inputs['token'])
         pos_embeddings = self.pos_embeddings(shortest_inputs['pos'])
-        dependency_embeddings = self.dependency_embeddings(shortest_inputs['dep'])
         dist_1_embeddings = self.distance_embeddings(shortest_inputs['dist1'])
         dist_2_embeddings = self.distance_embeddings(shortest_inputs['dist2'])
         position_embeddings = self.position_embeddings(shortest_inputs['position'])
 
-        batch_size, seq_len, _ = word_embeddings.size()
+        batch_size, seq_len, _ = pos_embeddings.size()
 
-        word_embeddings = word_embeddings.view(seq_len, batch_size, -1)
         pos_embeddings = pos_embeddings.view(seq_len, batch_size, -1)
-        dependency_embeddings = dependency_embeddings.view(seq_len, batch_size, -1)
         position_embeddings = position_embeddings.view(seq_len, batch_size, -1)
         dist_1_embeddings = dist_1_embeddings.view(seq_len, batch_size, -1)
         dist_2_embeddings = dist_2_embeddings.view(seq_len, batch_size, -1)
         
-        # Positional encoding for context-free word embeddings
-        # word_embeddings = word_embeddings + position_embeddings
-        
-        # Positional encoding for contextual word embeddings
         ELMO_shortest_embeddings = ELMO_shortest_embeddings.view(seq_len, batch_size, -1)
         ELMO_shortest_embeddings = ELMO_shortest_embeddings + position_embeddings
 
@@ -440,47 +379,43 @@ class Frankenstein(nn.Module):
         
         rnn_out, _ = self.rnn(pack, self.rnn_hidden)
         
-        unpack, _ = torch.nn.utils.rnn.pad_packed_sequence(rnn_out, batch_first=True) # batch_first=False if want to use rnn_out[-1]
-        
-        unpack = self.lockdrop(unpack, self.idrop)
+        unpack, _ = torch.nn.utils.rnn.pad_packed_sequence(rnn_out, batch_first=True)
 
         return unpack
 
-    def _get_cnn_out(self, embedding_vector, shortest_lengths):
+    def _get_cnn_out(self, embedding_vector):
         
         batch_size, seq_len, embedding_dim = embedding_vector.size()
         
+        # Multi-Head attention
         decode_vector = embedding_vector
         for i, mhattn in enumerate(self.multihead_attns):
-            mhattn_vect = mhattn(decode_vector, decode_vector)
+            mhattn_vect, _ = mhattn(decode_vector, decode_vector)
             decode_vector = F.relu(mhattn_vect)
         
         decode_vector = decode_vector.contiguous().view(batch_size, -1, seq_len) # [B, H, F]
         decode_vector = F.max_pool1d(decode_vector, decode_vector.size(2))  # [B, H, 1]
         
-        # CNN
-        # cnn_out = self.cnn(embedding_vector)
-        # cnn_out = self.dropout(cnn_out)
-        
         return decode_vector.squeeze(2)
 
     
-    def forward(self, inputs, shortest_inputs, entities, lengths, shortest_lengths, ELMO_embeddings, 
-                ELMO_shortest_embeddings, habitat_geographical_flag, ELMO_entity_embeddings):
+    def forward(self, inputs, shortest_inputs, entities, lengths, ELMO_embeddings, 
+                ELMO_shortest_embeddings, ELMO_entity_embeddings):
 
         rnn_embedding_vector, cnn_embedding_vector, batch_size = self._get_embedding(inputs, shortest_inputs, entities, lengths, ELMO_embeddings, ELMO_shortest_embeddings, ELMO_entity_embeddings)
-        
+
         rnn_out = self._get_rnn_out(rnn_embedding_vector, lengths, batch_size)
 
-        cnn_out = self._get_cnn_out(cnn_embedding_vector, shortest_lengths)
+        cnn_out = self._get_cnn_out(cnn_embedding_vector)
         
-        context_vector = self.self_attn(rnn_out, lengths)
+        # Additive attention
+        context_vector, _ = self.self_attn(rnn_out, lengths)
         if len(context_vector.size()) == 1:
             context_vector = context_vector.unsqueeze(0)
         
-        concat_vector = F.relu(torch.cat((context_vector, cnn_out, inputs['bert_features']), 1)) # rnn_out[-1] selected the last hidden
+        concat_vector = F.relu(torch.cat((context_vector, cnn_out, inputs['bert_features']), 1))
         
         concat_vector = self.dropout(concat_vector)
         output_vector = self.output(concat_vector)
         
-        return F.softmax(output_vector)
+        return F.softmax(output_vector, dim=1)

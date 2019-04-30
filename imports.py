@@ -48,3 +48,6 @@ from livelossplot import PlotLosses
 # np.random.seed(SEED)
 
 from allennlp.modules.elmo import Elmo, batch_to_ids
+
+import json_lines
+import shutil
