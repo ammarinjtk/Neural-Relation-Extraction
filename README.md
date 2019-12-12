@@ -1,6 +1,6 @@
-# A deep relation extraction from biomedical texts with attention mechanisms and domain-specific contextual representations
+# Relation extraction between bacteria and biotopes from biomedical texts with attention mechanisms and domain-specific contextual representations
 
-The repository contains the code used for `A deep relation extraction from biomedical texts with attention mechanisms and domain-specific contextual representations` paper on `BMC Bioinformatics` publication.
+The repository contains the code used for `Relation extraction between bacteria and biotopes from biomedical texts with attention mechanisms and domain-specific contextual representations` paper on `BMC Bioinformatics` publication (https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-019-3217-3).
 These following instructions will get you a copy of the project up and running on your local machine for reimplementation the proposed model.
 
 ## Installing
